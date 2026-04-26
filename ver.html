@@ -168,7 +168,7 @@ function conectar() {
 
 function llamar(codigo) {
   const remoteId = 'salud-mama-' + codigo;
-  currentCall = peer.call(remoteId, null); // null = solo recibo video, no envío
+  currentCall = peer.call(remoteId, new MediaStream()); // stream vacío = solo recibo, no envío
 
   if (!currentCall) {
     setMsg('No se pudo conectar. ¿Está el dispositivo de Maruja activo?', 'error');

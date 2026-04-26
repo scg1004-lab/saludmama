@@ -34,27 +34,6 @@
       font-size: 0.95rem;
     }
 
-    .config-bar {
-      background: #fff3cd;
-      border: 1px solid #ffc107;
-      border-radius: 12px;
-      padding: 14px 18px;
-      margin-bottom: 20px;
-      font-size: 0.9rem;
-    }
-    .config-bar summary { cursor: pointer; font-weight: 600; color: #856404; }
-    .config-bar .fields { margin-top: 12px; display: flex; flex-direction: column; gap: 10px; }
-    .config-bar input {
-      width: 100%; padding: 8px 12px; border: 1px solid #ddd;
-      border-radius: 8px; font-size: 0.9rem;
-    }
-    .config-bar button {
-      align-self: flex-start;
-      background: #5a3e8b; color: white; border: none;
-      padding: 8px 20px; border-radius: 8px; cursor: pointer;
-      font-size: 0.9rem;
-    }
-
     .grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
@@ -230,23 +209,6 @@
 <h1>💜 Salud de Mamá</h1>
 <p class="subtitle">Registro de temperatura y asistente de salud</p>
 
-<div style="max-width:900px; margin:0 auto;">
-  <details class="config-bar" id="configSection">
-    <summary>⚙️ Configuración (primera vez)</summary>
-    <div class="fields">
-      <div>
-        <label style="font-size:0.85rem;color:#666">URL del Apps Script (Google Sheets)</label>
-        <input type="text" id="cfgSheetUrl" placeholder="https://script.google.com/macros/s/.../exec">
-      </div>
-      <div>
-        <label style="font-size:0.85rem;color:#666">API Key de Gemini (Google AI Studio)</label>
-        <input type="password" id="cfgApiKey" placeholder="AIza...">
-      </div>
-      <button onclick="guardarConfig()">Guardar configuración</button>
-      <small style="color:#888">La configuración se guarda solo en tu navegador (localStorage).</small>
-    </div>
-  </details>
-</div>
 
 <div style="max-width:900px;margin:0 auto 20px;display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
   <a href="camara.html" style="text-decoration:none">
@@ -315,81 +277,35 @@
 </div>
 
 <script>
-// ─── Configuración ───────────────────────────────────────────────────────────
-let config = { sheetUrl: '', apiKey: '' };
+// ─── ÚNICA CONFIGURACIÓN ──────────────────────────────────────────────────────
+const APPS_SCRIPT_URL = 'PEGAR_URL_DEL_APPS_SCRIPT_AQUI';
 
-function cargarConfig() {
-  config.sheetUrl = localStorage.getItem('salud_sheetUrl') || '';
-  config.apiKey   = localStorage.getItem('salud_apiKey')   || '';
-  document.getElementById('cfgSheetUrl').value = config.sheetUrl;
-  document.getElementById('cfgApiKey').value   = config.apiKey;
-  if (config.sheetUrl && config.apiKey) {
-    document.getElementById('configSection').removeAttribute('open');
-    cargarHistorial();
-  } else {
-    document.getElementById('configSection').setAttribute('open', '');
-  }
-}
-
-function guardarConfig() {
-  config.sheetUrl = document.getElementById('cfgSheetUrl').value.trim();
-  config.apiKey   = document.getElementById('cfgApiKey').value.trim();
-  localStorage.setItem('salud_sheetUrl', config.sheetUrl);
-  localStorage.setItem('salud_apiKey',   config.apiKey);
-  document.getElementById('configSection').removeAttribute('open');
-  mostrarStatus('✅ Configuración guardada', false);
-  cargarHistorial();
-}
-
-// ─── Temperatura ─────────────────────────────────────────────────────────────
+// ─── Temperatura ──────────────────────────────────────────────────────────────
 function actualizarIndicador() {
-  const v = parseFloat(document.getElementById('tempValue').value);
+  const v  = parseFloat(document.getElementById('tempValue').value);
   const el = document.getElementById('tempIndicator');
   el.className = 'temp-indicator';
-  if      (v < 36.0)               { el.textContent = 'Temperatura baja';  el.classList.add('baja'); }
-  else if (v <= 37.2)               { el.textContent = 'Normal';            el.classList.add('normal'); }
-  else if (v <= 37.9)               { el.textContent = 'Febrícula';         el.classList.add('alta'); }
-  else                              { el.textContent = '⚠️ Fiebre';         el.classList.add('fiebre'); }
+  if      (v < 36.0) { el.textContent = 'Temperatura baja'; el.classList.add('baja'); }
+  else if (v <= 37.2) { el.textContent = 'Normal';           el.classList.add('normal'); }
+  else if (v <= 37.9) { el.textContent = 'Febrícula';        el.classList.add('alta'); }
+  else                { el.textContent = '⚠️ Fiebre';        el.classList.add('fiebre'); }
 }
 
 async function guardarTemperatura() {
-  if (!config.sheetUrl) {
-    mostrarStatus('❌ Configura la URL del Apps Script primero.', true);
-    document.getElementById('configSection').setAttribute('open', '');
-    return;
-  }
   const temp  = parseFloat(document.getElementById('tempValue').value);
   const notas = document.getElementById('tempNotas').value.trim();
-
   if (isNaN(temp) || temp < 34 || temp > 42) {
-    mostrarStatus('❌ Temperatura inválida (34–42 °C)', true);
-    return;
+    mostrarStatus('❌ Temperatura inválida (34–42 °C)', true); return;
   }
-
   const btn = document.getElementById('btnGuardar');
-  btn.disabled = true;
-  btn.textContent = 'Guardando...';
-  mostrarStatus('', false);
-
+  btn.disabled = true; btn.textContent = 'Guardando...';
   try {
-    const res = await fetch(config.sheetUrl, {
-      method: 'POST',
-      body: JSON.stringify({ temperatura: temp, notas }),
-    });
+    const res  = await fetch(APPS_SCRIPT_URL, { method: 'POST', body: JSON.stringify({ temperatura: temp, notas }) });
     const data = await res.json();
-    if (data.ok) {
-      mostrarStatus('✅ ' + data.mensaje, false);
-      document.getElementById('tempNotas').value = '';
-      cargarHistorial();
-    } else {
-      mostrarStatus('❌ Error: ' + data.error, true);
-    }
-  } catch (e) {
-    mostrarStatus('❌ No se pudo conectar con Google Sheets.', true);
-  }
-
-  btn.disabled = false;
-  btn.textContent = 'Guardar temperatura';
+    if (data.ok) { mostrarStatus('✅ ' + data.mensaje, false); document.getElementById('tempNotas').value = ''; cargarHistorial(); }
+    else           mostrarStatus('❌ ' + data.error, true);
+  } catch { mostrarStatus('❌ No se pudo conectar.', true); }
+  btn.disabled = false; btn.textContent = 'Guardar temperatura';
 }
 
 function mostrarStatus(msg, esError) {
@@ -401,34 +317,19 @@ function mostrarStatus(msg, esError) {
 
 // ─── Historial ────────────────────────────────────────────────────────────────
 async function cargarHistorial() {
-  if (!config.sheetUrl) return;
   const cont = document.getElementById('historialContainer');
   cont.innerHTML = '<p class="empty-history">Cargando...</p>';
   try {
-    const res  = await fetch(config.sheetUrl);
+    const res  = await fetch(APPS_SCRIPT_URL);
     const data = await res.json();
-    if (!data.ok || !data.datos.length) {
-      cont.innerHTML = '<p class="empty-history">No hay registros aún.</p>';
-      return;
-    }
+    if (!data.ok || !data.datos.length) { cont.innerHTML = '<p class="empty-history">No hay registros aún.</p>'; return; }
     const filas = data.datos.slice().reverse().map(d => {
-      const t = parseFloat(d.temperatura);
-      let cls = 'normal';
-      if (t < 36) cls = 'baja'; else if (t > 37.9) cls = 'fiebre'; else if (t > 37.2) cls = 'alta';
-      return `<tr>
-        <td>${d.fecha}</td><td>${d.hora}</td>
-        <td class="temp-cell" style="color:${cls==='fiebre'?'#c0392b':cls==='alta'?'#e67e22':cls==='baja'?'#2980b9':'#27ae60'}">${t} °C</td>
-        <td>${d.notas || '—'}</td>
-      </tr>`;
+      const t   = parseFloat(d.temperatura);
+      const col = t > 37.9 ? '#c0392b' : t > 37.2 ? '#e67e22' : t < 36 ? '#2980b9' : '#27ae60';
+      return `<tr><td>${d.fecha}</td><td>${d.hora}</td><td class="temp-cell" style="color:${col}">${t} °C</td><td>${d.notas||'—'}</td></tr>`;
     }).join('');
-    cont.innerHTML = `
-      <table class="history-table">
-        <thead><tr><th>Fecha</th><th>Hora</th><th>Temperatura</th><th>Notas</th></tr></thead>
-        <tbody>${filas}</tbody>
-      </table>`;
-  } catch (e) {
-    cont.innerHTML = '<p class="empty-history">Error al cargar historial.</p>';
-  }
+    cont.innerHTML = `<table class="history-table"><thead><tr><th>Fecha</th><th>Hora</th><th>Temperatura</th><th>Notas</th></tr></thead><tbody>${filas}</tbody></table>`;
+  } catch { cont.innerHTML = '<p class="empty-history">Error al cargar historial.</p>'; }
 }
 
 // ─── Chat ─────────────────────────────────────────────────────────────────────
@@ -438,55 +339,26 @@ async function enviarMensaje() {
   const input = document.getElementById('chatInput');
   const texto = input.value.trim();
   if (!texto) return;
-  if (!config.apiKey) {
-    agregarBurbuja('assistant', '❌ Configura tu API Key de Anthropic primero.');
-    document.getElementById('configSection').setAttribute('open', '');
-    return;
-  }
-
   input.value = '';
   agregarBurbuja('user', texto);
   mensajes.push({ role: 'user', content: texto });
-
   const tipId = agregarBurbuja('assistant', '...', true);
   document.getElementById('btnEnviar').disabled = true;
-
   try {
-    const historial = mensajes.slice(-10).map(m => ({
-      role: m.role === 'assistant' ? 'model' : 'user',
-      parts: [{ text: m.content }],
-    }));
-
-    const res = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${config.apiKey}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          system_instruction: {
-            parts: [{ text: `Eres un asistente de salud cariñoso que habla directamente con Maruja, una señora de 84 años.
-Trátala siempre con mucho cariño, paciencia y respeto. Usa un lenguaje sencillo, cálido y cercano, como si fuera tu abuela.
-Pregúntale cómo se siente, si tiene dolores, si durmió bien, si comió. Anímala y hazla sentir acompañada.
-Si menciona síntomas preocupantes o fiebre alta, dile con calma que es bueno avisar a su familia o al médico.
-Nunca hagas diagnósticos. Responde siempre en español, con frases cortas y fáciles de entender.` }]
-          },
-          contents: historial,
-          generationConfig: { maxOutputTokens: 600 },
-        }),
-      }
-    );
-
-    const data  = await res.json();
-    const reply = data.candidates?.[0]?.content?.parts?.[0]?.text || 'No pude responder en este momento.';
+    const res  = await fetch(APPS_SCRIPT_URL, {
+      method: 'POST',
+      body: JSON.stringify({ action: 'chat', mensajes: mensajes.slice(-10) }),
+    });
+    const data = await res.json();
+    const reply = data.reply || 'No pude responder en este momento.';
     eliminarBurbuja(tipId);
     agregarBurbuja('assistant', reply);
     mensajes.push({ role: 'assistant', content: reply });
     hablar(reply);
-  } catch (e) {
+  } catch {
     eliminarBurbuja(tipId);
     agregarBurbuja('assistant', '❌ Error al conectar con el asistente.');
   }
-
   document.getElementById('btnEnviar').disabled = false;
 }
 
@@ -502,72 +374,42 @@ function agregarBurbuja(rol, texto, esTyping = false) {
   return id;
 }
 
-function eliminarBurbuja(id) {
-  document.getElementById(id)?.remove();
-}
+function eliminarBurbuja(id) { document.getElementById(id)?.remove(); }
 
-// ─── Voz (entrada) ───────────────────────────────────────────────────────────
-let reconocimiento = null;
-let grabando = false;
+// ─── Voz (entrada) ────────────────────────────────────────────────────────────
+let reconocimiento = null, grabando = false;
 
 function toggleVoz() {
   if (!('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)) {
-    alert('Tu navegador no soporta reconocimiento de voz. Usa Chrome.');
-    return;
+    alert('Usa Chrome para reconocimiento de voz.'); return;
   }
-  if (grabando) {
-    reconocimiento?.stop();
-    return;
-  }
+  if (grabando) { reconocimiento?.stop(); return; }
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
   reconocimiento = new SR();
-  reconocimiento.lang = 'es-MX';
+  reconocimiento.lang = 'es-ES';
   reconocimiento.interimResults = false;
-  reconocimiento.maxAlternatives = 1;
-
-  reconocimiento.onstart = () => {
-    grabando = true;
-    document.getElementById('btnVoz').classList.add('recording');
-    document.getElementById('btnVoz').textContent = '⏹️';
-  };
-  reconocimiento.onresult = (e) => {
-    const t = e.results[0][0].transcript;
-    document.getElementById('chatInput').value = t;
-    enviarMensaje();
-  };
-  reconocimiento.onend = () => {
-    grabando = false;
-    document.getElementById('btnVoz').classList.remove('recording');
-    document.getElementById('btnVoz').textContent = '🎤';
-  };
-  reconocimiento.onerror = () => reconocimiento.stop();
+  reconocimiento.onstart  = () => { grabando = true;  document.getElementById('btnVoz').classList.add('recording'); document.getElementById('btnVoz').textContent = '⏹️'; };
+  reconocimiento.onresult = e  => { document.getElementById('chatInput').value = e.results[0][0].transcript; enviarMensaje(); };
+  reconocimiento.onend    = () => { grabando = false; document.getElementById('btnVoz').classList.remove('recording'); document.getElementById('btnVoz').textContent = '🎤'; };
+  reconocimiento.onerror  = () => reconocimiento.stop();
   reconocimiento.start();
 }
 
-// ─── Voz (salida / TTS) ──────────────────────────────────────────────────────
+// ─── Voz (salida TTS) ─────────────────────────────────────────────────────────
 function hablar(texto) {
   if (!window.speechSynthesis) return;
-  window.speechSynthesis.cancel();
-  const u  = new SpeechSynthesisUtterance(texto);
-  u.lang   = 'es-MX';
-  u.rate   = 0.95;
-  u.pitch  = 1;
-  // Intentar voz femenina en español
-  const voces = speechSynthesis.getVoices();
-  const voz   = voces.find(v => v.lang.startsWith('es') && v.name.toLowerCase().includes('female'))
-              || voces.find(v => v.lang.startsWith('es'))
-              || null;
+  speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance(texto);
+  u.lang  = 'es-ES'; u.rate = 0.95;
+  const voz = speechSynthesis.getVoices().find(v => v.lang.startsWith('es')) || null;
   if (voz) u.voice = voz;
   speechSynthesis.speak(u);
 }
 
 // ─── Init ─────────────────────────────────────────────────────────────────────
-if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('sw.js').catch(() => {});
-}
-cargarConfig();
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
 actualizarIndicador();
-// Cargar voces al inicio (Chrome las carga async)
+cargarHistorial();
 if (window.speechSynthesis) speechSynthesis.onvoiceschanged = () => {};
 </script>
 </body>
