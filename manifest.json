@@ -1,0 +1,14 @@
+{
+  "name": "Salud de Mamá",
+  "short_name": "Salud Mamá",
+  "description": "Registro de temperatura y asistente de salud con voz",
+  "start_url": "/index.html",
+  "display": "standalone",
+  "background_color": "#f0f4ff",
+  "theme_color": "#5a3e8b",
+  "orientation": "portrait-primary",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}

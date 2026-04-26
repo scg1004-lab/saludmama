@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Salud Mamá</title>
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#5a3e8b">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Salud Mamá">
+  <link rel="apple-touch-icon" href="icon-192.png">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: linear-gradient(135deg, #f0f4ff 0%, #fdf0f8 100%);
+      min-height: 100vh;
+      padding: 20px;
+      color: #333;
+    }
+
+    h1 {
+      text-align: center;
+      font-size: 2rem;
+      color: #5a3e8b;
+      margin-bottom: 8px;
+    }
+    .subtitle {
+      text-align: center;
+      color: #888;
+      margin-bottom: 24px;
+      font-size: 0.95rem;
+    }
+
+    .config-bar {
+      background: #fff3cd;
+      border: 1px solid #ffc107;
+      border-radius: 12px;
+      padding: 14px 18px;
+      margin-bottom: 20px;
+      font-size: 0.9rem;
+    }
+    .config-bar summary { cursor: pointer; font-weight: 600; color: #856404; }
+    .config-bar .fields { margin-top: 12px; display: flex; flex-direction: column; gap: 10px; }
+    .config-bar input {
+      width: 100%; padding: 8px 12px; border: 1px solid #ddd;
+      border-radius: 8px; font-size: 0.9rem;
+    }
+    .config-bar button {
+      align-self: flex-start;
+      background: #5a3e8b; color: white; border: none;
+      padding: 8px 20px; border-radius: 8px; cursor: pointer;
+      font-size: 0.9rem;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      max-width: 900px;
+      margin: 0 auto;
+    }
+    @media (max-width: 640px) { .grid { grid-template-columns: 1fr; } }
+
+    .card {
+      background: white;
+      border-radius: 20px;
+      padding: 24px;
+      box-shadow: 0 4px 20px rgba(90,62,139,0.10);
+    }
+    .card h2 {
+      font-size: 1.2rem;
+      color: #5a3e8b;
+      margin-bottom: 18px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    /* Temperatura */
+    .temp-display {
+      text-align: center;
+      margin-bottom: 16px;
+    }
+    .temp-display input[type=number] {
+      font-size: 3rem;
+      width: 160px;
+      text-align: center;
+      border: 3px solid #d0b8f5;
+      border-radius: 16px;
+      padding: 8px;
+      color: #5a3e8b;
+      font-weight: bold;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .temp-display input[type=number]:focus { border-color: #5a3e8b; }
+    .temp-unit { font-size: 1.8rem; color: #888; margin-left: 4px; }
+
+    .temp-indicator {
+      margin: 8px auto;
+      padding: 6px 16px;
+      border-radius: 20px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      display: inline-block;
+    }
+    .normal { background: #d4edda; color: #155724; }
+    .baja   { background: #cce5ff; color: #004085; }
+    .alta   { background: #fff3cd; color: #856404; }
+    .fiebre { background: #f8d7da; color: #721c24; }
+
+    .notes-input {
+      width: 100%; padding: 10px; border: 1px solid #ddd;
+      border-radius: 10px; font-size: 0.9rem; resize: none;
+      margin: 10px 0; font-family: inherit;
+    }
+    .btn-save {
+      width: 100%; padding: 14px;
+      background: linear-gradient(135deg, #5a3e8b, #8b5cf6);
+      color: white; border: none; border-radius: 14px;
+      font-size: 1.1rem; font-weight: 600; cursor: pointer;
+      transition: opacity 0.2s, transform 0.1s;
+    }
+    .btn-save:hover { opacity: 0.9; transform: translateY(-1px); }
+    .btn-save:active { transform: translateY(0); }
+    .btn-save:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .status-msg {
+      margin-top: 10px; text-align: center; font-size: 0.9rem;
+      min-height: 20px; color: #5a3e8b;
+    }
+    .status-msg.error { color: #dc3545; }
+
+    /* Chat */
+    .chat-box {
+      height: 260px;
+      overflow-y: auto;
+      border: 1px solid #e8e0f5;
+      border-radius: 14px;
+      padding: 12px;
+      margin-bottom: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      background: #faf8ff;
+    }
+
+    .bubble {
+      max-width: 85%;
+      padding: 10px 14px;
+      border-radius: 18px;
+      font-size: 0.92rem;
+      line-height: 1.45;
+    }
+    .bubble.user {
+      background: #5a3e8b; color: white;
+      align-self: flex-end;
+      border-bottom-right-radius: 4px;
+    }
+    .bubble.assistant {
+      background: #f0e8ff; color: #333;
+      align-self: flex-start;
+      border-bottom-left-radius: 4px;
+    }
+    .bubble.typing { color: #888; font-style: italic; }
+
+    .chat-input-row {
+      display: flex; gap: 8px; align-items: center;
+    }
+    .chat-input {
+      flex: 1; padding: 10px 14px;
+      border: 1px solid #d0b8f5; border-radius: 24px;
+      font-size: 0.95rem; outline: none;
+      font-family: inherit;
+    }
+    .chat-input:focus { border-color: #5a3e8b; }
+
+    .btn-voice {
+      width: 46px; height: 46px;
+      background: #f0e8ff; border: none; border-radius: 50%;
+      font-size: 1.3rem; cursor: pointer;
+      transition: background 0.2s;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .btn-voice:hover { background: #e0d0ff; }
+    .btn-voice.recording { background: #f8d7da; animation: pulse 1s infinite; }
+
+    .btn-send {
+      width: 46px; height: 46px;
+      background: #5a3e8b; border: none; border-radius: 50%;
+      color: white; font-size: 1.2rem; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: background 0.2s;
+    }
+    .btn-send:hover { background: #4a2e7b; }
+    .btn-send:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); }
+      50%       { transform: scale(1.08); }
+    }
+
+    /* Historial */
+    .history-card { grid-column: 1 / -1; }
+    .history-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+    .history-table th {
+      background: #f0e8ff; color: #5a3e8b;
+      padding: 8px 12px; text-align: left; font-weight: 600;
+    }
+    .history-table td { padding: 8px 12px; border-bottom: 1px solid #f0e0ff; }
+    .history-table tr:last-child td { border-bottom: none; }
+    .history-table tr:hover td { background: #faf5ff; }
+    .temp-cell { font-weight: 700; }
+
+    .empty-history { text-align: center; color: #aaa; padding: 24px; }
+
+    .btn-refresh {
+      background: none; border: 1px solid #d0b8f5; border-radius: 20px;
+      padding: 4px 14px; font-size: 0.85rem; cursor: pointer; color: #5a3e8b;
+      margin-left: 10px;
+    }
+    .btn-refresh:hover { background: #f0e8ff; }
+  </style>
+</head>
+<body>
+
+<h1>💜 Salud de Mamá</h1>
+<p class="subtitle">Registro de temperatura y asistente de salud</p>
+
+<div style="max-width:900px; margin:0 auto;">
+  <details class="config-bar" id="configSection">
+    <summary>⚙️ Configuración (primera vez)</summary>
+    <div class="fields">
+      <div>
+        <label style="font-size:0.85rem;color:#666">URL del Apps Script (Google Sheets)</label>
+        <input type="text" id="cfgSheetUrl" placeholder="https://script.google.com/macros/s/.../exec">
+      </div>
+      <div>
+        <label style="font-size:0.85rem;color:#666">API Key de Gemini (Google AI Studio)</label>
+        <input type="password" id="cfgApiKey" placeholder="AIza...">
+      </div>
+      <button onclick="guardarConfig()">Guardar configuración</button>
+      <small style="color:#888">La configuración se guarda solo en tu navegador (localStorage).</small>
+    </div>
+  </details>
+</div>
+
+<div class="grid">
+
+  <!-- TEMPERATURA -->
+  <div class="card">
+    <h2>🌡️ Registrar Temperatura</h2>
+    <div class="temp-display">
+      <input type="number" id="tempValue" value="36.5" min="34" max="42" step="0.1"
+             oninput="actualizarIndicador()">
+      <span class="temp-unit">°C</span>
+    </div>
+    <div style="text-align:center">
+      <span class="temp-indicator normal" id="tempIndicator">Normal</span>
+    </div>
+    <textarea class="notes-input" id="tempNotas" rows="2"
+              placeholder="Notas (opcional): síntomas, medicación..."></textarea>
+    <button class="btn-save" id="btnGuardar" onclick="guardarTemperatura()">
+      Guardar temperatura
+    </button>
+    <div class="status-msg" id="statusMsg"></div>
+  </div>
+
+  <!-- CHAT -->
+  <div class="card">
+    <h2>💬 Asistente de Salud</h2>
+    <div class="chat-box" id="chatBox">
+      <div class="bubble assistant">
+        Hola, soy tu asistente. Puedo ayudarte con información sobre la salud de tu mamá.
+        Pregúntame lo que necesites o usa el micrófono para hablar. 🌸
+      </div>
+    </div>
+    <div class="chat-input-row">
+      <button class="btn-voice" id="btnVoz" onclick="toggleVoz()" title="Hablar">🎤</button>
+      <input class="chat-input" id="chatInput" type="text"
+             placeholder="Escribe tu pregunta..."
+             onkeydown="if(event.key==='Enter') enviarMensaje()">
+      <button class="btn-send" id="btnEnviar" onclick="enviarMensaje()">➤</button>
+    </div>
+  </div>
+
+  <!-- HISTORIAL -->
+  <div class="card history-card">
+    <h2>
+      📊 Historial
+      <button class="btn-refresh" onclick="cargarHistorial()">↻ Actualizar</button>
+    </h2>
+    <div id="historialContainer">
+      <p class="empty-history">Configura la URL del Apps Script para ver el historial.</p>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ─── Configuración ───────────────────────────────────────────────────────────
+let config = { sheetUrl: '', apiKey: '' };
+
+function cargarConfig() {
+  config.sheetUrl = localStorage.getItem('salud_sheetUrl') || '';
+  config.apiKey   = localStorage.getItem('salud_apiKey')   || '';
+  document.getElementById('cfgSheetUrl').value = config.sheetUrl;
+  document.getElementById('cfgApiKey').value   = config.apiKey;
+  if (config.sheetUrl && config.apiKey) {
+    document.getElementById('configSection').removeAttribute('open');
+    cargarHistorial();
+  } else {
+    document.getElementById('configSection').setAttribute('open', '');
+  }
+}
+
+function guardarConfig() {
+  config.sheetUrl = document.getElementById('cfgSheetUrl').value.trim();
+  config.apiKey   = document.getElementById('cfgApiKey').value.trim();
+  localStorage.setItem('salud_sheetUrl', config.sheetUrl);
+  localStorage.setItem('salud_apiKey',   config.apiKey);
+  document.getElementById('configSection').removeAttribute('open');
+  mostrarStatus('✅ Configuración guardada', false);
+  cargarHistorial();
+}
+
+// ─── Temperatura ─────────────────────────────────────────────────────────────
+function actualizarIndicador() {
+  const v = parseFloat(document.getElementById('tempValue').value);
+  const el = document.getElementById('tempIndicator');
+  el.className = 'temp-indicator';
+  if      (v < 36.0)               { el.textContent = 'Temperatura baja';  el.classList.add('baja'); }
+  else if (v <= 37.2)               { el.textContent = 'Normal';            el.classList.add('normal'); }
+  else if (v <= 37.9)               { el.textContent = 'Febrícula';         el.classList.add('alta'); }
+  else                              { el.textContent = '⚠️ Fiebre';         el.classList.add('fiebre'); }
+}
+
+async function guardarTemperatura() {
+  if (!config.sheetUrl) {
+    mostrarStatus('❌ Configura la URL del Apps Script primero.', true);
+    document.getElementById('configSection').setAttribute('open', '');
+    return;
+  }
+  const temp  = parseFloat(document.getElementById('tempValue').value);
+  const notas = document.getElementById('tempNotas').value.trim();
+
+  if (isNaN(temp) || temp < 34 || temp > 42) {
+    mostrarStatus('❌ Temperatura inválida (34–42 °C)', true);
+    return;
+  }
+
+  const btn = document.getElementById('btnGuardar');
+  btn.disabled = true;
+  btn.textContent = 'Guardando...';
+  mostrarStatus('', false);
+
+  try {
+    const res = await fetch(config.sheetUrl, {
+      method: 'POST',
+      body: JSON.stringify({ temperatura: temp, notas }),
+    });
+    const data = await res.json();
+    if (data.ok) {
+      mostrarStatus('✅ ' + data.mensaje, false);
+      document.getElementById('tempNotas').value = '';
+      cargarHistorial();
+    } else {
+      mostrarStatus('❌ Error: ' + data.error, true);
+    }
+  } catch (e) {
+    mostrarStatus('❌ No se pudo conectar con Google Sheets.', true);
+  }
+
+  btn.disabled = false;
+  btn.textContent = 'Guardar temperatura';
+}
+
+function mostrarStatus(msg, esError) {
+  const el = document.getElementById('statusMsg');
+  el.textContent = msg;
+  el.className = 'status-msg' + (esError ? ' error' : '');
+  if (msg) setTimeout(() => el.textContent = '', 5000);
+}
+
+// ─── Historial ────────────────────────────────────────────────────────────────
+async function cargarHistorial() {
+  if (!config.sheetUrl) return;
+  const cont = document.getElementById('historialContainer');
+  cont.innerHTML = '<p class="empty-history">Cargando...</p>';
+  try {
+    const res  = await fetch(config.sheetUrl);
+    const data = await res.json();
+    if (!data.ok || !data.datos.length) {
+      cont.innerHTML = '<p class="empty-history">No hay registros aún.</p>';
+      return;
+    }
+    const filas = data.datos.slice().reverse().map(d => {
+      const t = parseFloat(d.temperatura);
+      let cls = 'normal';
+      if (t < 36) cls = 'baja'; else if (t > 37.9) cls = 'fiebre'; else if (t > 37.2) cls = 'alta';
+      return `<tr>
+        <td>${d.fecha}</td><td>${d.hora}</td>
+        <td class="temp-cell" style="color:${cls==='fiebre'?'#c0392b':cls==='alta'?'#e67e22':cls==='baja'?'#2980b9':'#27ae60'}">${t} °C</td>
+        <td>${d.notas || '—'}</td>
+      </tr>`;
+    }).join('');
+    cont.innerHTML = `
+      <table class="history-table">
+        <thead><tr><th>Fecha</th><th>Hora</th><th>Temperatura</th><th>Notas</th></tr></thead>
+        <tbody>${filas}</tbody>
+      </table>`;
+  } catch (e) {
+    cont.innerHTML = '<p class="empty-history">Error al cargar historial.</p>';
+  }
+}
+
+// ─── Chat ─────────────────────────────────────────────────────────────────────
+const mensajes = [];
+
+async function enviarMensaje() {
+  const input = document.getElementById('chatInput');
+  const texto = input.value.trim();
+  if (!texto) return;
+  if (!config.apiKey) {
+    agregarBurbuja('assistant', '❌ Configura tu API Key de Anthropic primero.');
+    document.getElementById('configSection').setAttribute('open', '');
+    return;
+  }
+
+  input.value = '';
+  agregarBurbuja('user', texto);
+  mensajes.push({ role: 'user', content: texto });
+
+  const tipId = agregarBurbuja('assistant', '...', true);
+  document.getElementById('btnEnviar').disabled = true;
+
+  try {
+    const historial = mensajes.slice(-10).map(m => ({
+      role: m.role === 'assistant' ? 'model' : 'user',
+      parts: [{ text: m.content }],
+    }));
+
+    const res = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${config.apiKey}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          system_instruction: {
+            parts: [{ text: `Eres un asistente de salud amable y claro. Ayudas a cuidadores de personas mayores.
+La usuaria cuida a su madre de 84 años. Responde de forma simple, tranquilizadora y en español.
+Si la temperatura es alta, sugiere cuándo contactar al médico. No hagas diagnósticos definitivos.` }]
+          },
+          contents: historial,
+          generationConfig: { maxOutputTokens: 600 },
+        }),
+      }
+    );
+
+    const data  = await res.json();
+    const reply = data.candidates?.[0]?.content?.parts?.[0]?.text || 'No pude responder en este momento.';
+    eliminarBurbuja(tipId);
+    agregarBurbuja('assistant', reply);
+    mensajes.push({ role: 'assistant', content: reply });
+    hablar(reply);
+  } catch (e) {
+    eliminarBurbuja(tipId);
+    agregarBurbuja('assistant', '❌ Error al conectar con el asistente.');
+  }
+
+  document.getElementById('btnEnviar').disabled = false;
+}
+
+function agregarBurbuja(rol, texto, esTyping = false) {
+  const box = document.getElementById('chatBox');
+  const div = document.createElement('div');
+  const id  = 'b' + Date.now() + Math.random();
+  div.id = id;
+  div.className = 'bubble ' + rol + (esTyping ? ' typing' : '');
+  div.textContent = texto;
+  box.appendChild(div);
+  box.scrollTop = box.scrollHeight;
+  return id;
+}
+
+function eliminarBurbuja(id) {
+  document.getElementById(id)?.remove();
+}
+
+// ─── Voz (entrada) ───────────────────────────────────────────────────────────
+let reconocimiento = null;
+let grabando = false;
+
+function toggleVoz() {
+  if (!('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)) {
+    alert('Tu navegador no soporta reconocimiento de voz. Usa Chrome.');
+    return;
+  }
+  if (grabando) {
+    reconocimiento?.stop();
+    return;
+  }
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  reconocimiento = new SR();
+  reconocimiento.lang = 'es-MX';
+  reconocimiento.interimResults = false;
+  reconocimiento.maxAlternatives = 1;
+
+  reconocimiento.onstart = () => {
+    grabando = true;
+    document.getElementById('btnVoz').classList.add('recording');
+    document.getElementById('btnVoz').textContent = '⏹️';
+  };
+  reconocimiento.onresult = (e) => {
+    const t = e.results[0][0].transcript;
+    document.getElementById('chatInput').value = t;
+    enviarMensaje();
+  };
+  reconocimiento.onend = () => {
+    grabando = false;
+    document.getElementById('btnVoz').classList.remove('recording');
+    document.getElementById('btnVoz').textContent = '🎤';
+  };
+  reconocimiento.onerror = () => reconocimiento.stop();
+  reconocimiento.start();
+}
+
+// ─── Voz (salida / TTS) ──────────────────────────────────────────────────────
+function hablar(texto) {
+  if (!window.speechSynthesis) return;
+  window.speechSynthesis.cancel();
+  const u  = new SpeechSynthesisUtterance(texto);
+  u.lang   = 'es-MX';
+  u.rate   = 0.95;
+  u.pitch  = 1;
+  // Intentar voz femenina en español
+  const voces = speechSynthesis.getVoices();
+  const voz   = voces.find(v => v.lang.startsWith('es') && v.name.toLowerCase().includes('female'))
+              || voces.find(v => v.lang.startsWith('es'))
+              || null;
+  if (voz) u.voice = voz;
+  speechSynthesis.speak(u);
+}
+
+// ─── Init ─────────────────────────────────────────────────────────────────────
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js').catch(() => {});
+}
+cargarConfig();
+actualizarIndicador();
+// Cargar voces al inicio (Chrome las carga async)
+if (window.speechSynthesis) speechSynthesis.onvoiceschanged = () => {};
+</script>
+</body>
+</html>
