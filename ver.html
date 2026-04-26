@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ver a Maruja</title>
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#5a3e8b">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Ver Maruja">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #0d0d0d;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      color: white;
+    }
+
+    .top-bar {
+      width: 100%;
+      padding: 14px 20px;
+      background: rgba(90,62,139,0.9);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      backdrop-filter: blur(8px);
+    }
+    .top-bar h1 { font-size: 1.1rem; }
+    .badge {
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 0.8rem;
+      font-weight: 700;
+    }
+    .badge.en-vivo    { background: #e74c3c; animation: blink 1.5s infinite; }
+    .badge.esperando  { background: #555; }
+    .badge.conectando { background: #e67e22; }
+    @keyframes blink { 50% { opacity: 0.5; } }
+
+    video {
+      width: 100%;
+      max-height: calc(100vh - 140px);
+      object-fit: contain;
+      background: #111;
+    }
+
+    .bottom-bar {
+      width: 100%;
+      padding: 14px 20px;
+      background: rgba(20,20,20,0.95);
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .connect-row {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+    input {
+      flex: 1;
+      padding: 10px 14px;
+      border-radius: 10px;
+      border: 1px solid #444;
+      background: #222;
+      color: white;
+      font-size: 1rem;
+      letter-spacing: 2px;
+      font-weight: 700;
+      outline: none;
+    }
+    input:focus { border-color: #8b5cf6; }
+    input::placeholder { color: #555; letter-spacing: 0; font-weight: 400; }
+
+    .btn {
+      padding: 10px 22px;
+      background: linear-gradient(135deg, #5a3e8b, #8b5cf6);
+      color: white; border: none; border-radius: 10px;
+      font-size: 0.95rem; font-weight: 600; cursor: pointer;
+      white-space: nowrap;
+      transition: opacity 0.2s;
+    }
+    .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+    .btn.danger { background: #c0392b; }
+
+    .msg {
+      font-size: 0.85rem;
+      color: #aaa;
+      text-align: center;
+    }
+    .msg.error { color: #e74c3c; }
+    .msg.ok    { color: #2ecc71; }
+
+    .placeholder {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+      padding: 40px;
+      opacity: 0.4;
+    }
+    .placeholder span { font-size: 4rem; }
+    .placeholder p    { font-size: 1rem; }
+
+    a.back { color: #8b5cf6; font-size: 0.85rem; text-decoration: none; }
+    a.back:hover { text-decoration: underline; }
+  </style>
+</head>
+<body>
+
+<div class="top-bar">
+  <h1>💜 Ver a Maruja</h1>
+  <span class="badge esperando" id="badge">Desconectado</span>
+</div>
+
+<div id="placeholder" class="placeholder">
+  <span>👵</span>
+  <p>Ingresa el código y pulsa Conectar</p>
+</div>
+<video id="remoteVideo" autoplay playsinline style="display:none"></video>
+
+<div class="bottom-bar">
+  <div class="connect-row">
+    <input type="text" id="roomCode" placeholder="ej: maruja2024"
+           oninput="this.value=this.value.toLowerCase().replace(/[^a-z0-9]/g,'')">
+    <button class="btn" id="btnConectar" onclick="conectar()">Conectar</button>
+    <button class="btn danger" id="btnCortar" onclick="cortar()" style="display:none">Colgar</button>
+  </div>
+  <div class="msg" id="msgEl">Escribe el código de sala del móvil de Maruja</div>
+  <a class="back" href="index.html">← Volver al inicio</a>
+</div>
+
+<script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+<script>
+let peer = null;
+let currentCall = null;
+
+function conectar() {
+  const codigo = document.getElementById('roomCode').value.trim();
+  if (!codigo) { setMsg('Escribe el código de sala', ''); return; }
+  localStorage.setItem('salud_roomCode', codigo);
+
+  document.getElementById('btnConectar').disabled = true;
+  setBadge('conectando', '⏳ Conectando...');
+  setMsg('Conectando con el servidor...', '');
+
+  if (peer) peer.destroy();
+
+  peer = new Peer({ host: '0.peerjs.com', port: 443, secure: true, path: '/' });
+
+  peer.on('open', () => {
+    setMsg('Llamando al dispositivo de Maruja...', '');
+    llamar(codigo);
+  });
+
+  peer.on('error', err => {
+    setBadge('esperando', 'Error');
+    setMsg('Error: ' + err.message, 'error');
+    document.getElementById('btnConectar').disabled = false;
+  });
+}
+
+function llamar(codigo) {
+  const remoteId = 'salud-mama-' + codigo;
+  currentCall = peer.call(remoteId, null); // null = solo recibo video, no envío
+
+  if (!currentCall) {
+    setMsg('No se pudo conectar. ¿Está el dispositivo de Maruja activo?', 'error');
+    setBadge('esperando', 'Sin conexión');
+    document.getElementById('btnConectar').disabled = false;
+    return;
+  }
+
+  currentCall.on('stream', stream => {
+    const video = document.getElementById('remoteVideo');
+    video.srcObject = stream;
+    video.style.display = 'block';
+    document.getElementById('placeholder').style.display = 'none';
+    document.getElementById('btnCortar').style.display = 'inline-block';
+    document.getElementById('btnConectar').style.display = 'none';
+    setBadge('en-vivo', '🔴 En vivo');
+    setMsg('✅ Conectado — estás viendo a Maruja', 'ok');
+  });
+
+  currentCall.on('close', () => {
+    resetVideo();
+    setMsg('La conexión se cerró.', '');
+  });
+
+  currentCall.on('error', () => {
+    resetVideo();
+    setMsg('La conexión tuvo un error.', 'error');
+  });
+
+  // Timeout si no responde en 15s
+  setTimeout(() => {
+    if (currentCall && !document.getElementById('remoteVideo').srcObject) {
+      setMsg('No hay respuesta. ¿Está activa la cámara de Maruja?', 'error');
+      setBadge('esperando', 'Sin respuesta');
+      document.getElementById('btnConectar').disabled = false;
+    }
+  }, 15000);
+}
+
+function cortar() {
+  currentCall?.close();
+  peer?.destroy();
+  resetVideo();
+  setMsg('Llamada finalizada.', '');
+}
+
+function resetVideo() {
+  const video = document.getElementById('remoteVideo');
+  video.srcObject = null;
+  video.style.display = 'none';
+  document.getElementById('placeholder').style.display = 'flex';
+  document.getElementById('btnCortar').style.display = 'none';
+  document.getElementById('btnConectar').style.display = 'inline-block';
+  document.getElementById('btnConectar').disabled = false;
+  setBadge('esperando', 'Desconectado');
+}
+
+function setBadge(tipo, texto) {
+  const el = document.getElementById('badge');
+  el.className = 'badge ' + tipo;
+  el.textContent = texto;
+}
+function setMsg(texto, tipo) {
+  const el = document.getElementById('msgEl');
+  el.className = 'msg' + (tipo ? ' ' + tipo : '');
+  el.textContent = texto;
+}
+
+const saved = localStorage.getItem('salud_roomCode');
+if (saved) document.getElementById('roomCode').value = saved;
+</script>
+</body>
+</html>

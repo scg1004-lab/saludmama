@@ -248,6 +248,19 @@
   </details>
 </div>
 
+<div style="max-width:900px;margin:0 auto 20px;display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
+  <a href="camara.html" style="text-decoration:none">
+    <button style="padding:12px 24px;background:linear-gradient(135deg,#5a3e8b,#8b5cf6);color:white;border:none;border-radius:14px;font-size:1rem;font-weight:600;cursor:pointer">
+      📷 Activar cámara (móvil de Mamá)
+    </button>
+  </a>
+  <a href="ver.html" style="text-decoration:none">
+    <button style="padding:12px 24px;background:linear-gradient(135deg,#2c7a4b,#3dbb72);color:white;border:none;border-radius:14px;font-size:1rem;font-weight:600;cursor:pointer">
+      👁️ Ver a Mamá (mi dispositivo)
+    </button>
+  </a>
+</div>
+
 <div class="grid">
 
   <!-- TEMPERATURA -->
@@ -274,8 +287,9 @@
     <h2>💬 Asistente de Salud</h2>
     <div class="chat-box" id="chatBox">
       <div class="bubble assistant">
-        Hola, soy tu asistente. Puedo ayudarte con información sobre la salud de tu mamá.
-        Pregúntame lo que necesites o usa el micrófono para hablar. 🌸
+        ¡Hola Maruja! 💜 ¡Qué alegría verte por aquí! ¿Cómo te encuentras hoy?
+        ¿Tienes algún dolor o algo que no te esté sintiendo bien?
+        Cuéntame tranquilamente, estoy aquí para escucharte 🌸
       </div>
     </div>
     <div class="chat-input-row">
@@ -450,9 +464,11 @@ async function enviarMensaje() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           system_instruction: {
-            parts: [{ text: `Eres un asistente de salud amable y claro. Ayudas a cuidadores de personas mayores.
-La usuaria cuida a su madre de 84 años. Responde de forma simple, tranquilizadora y en español.
-Si la temperatura es alta, sugiere cuándo contactar al médico. No hagas diagnósticos definitivos.` }]
+            parts: [{ text: `Eres un asistente de salud cariñoso que habla directamente con Maruja, una señora de 84 años.
+Trátala siempre con mucho cariño, paciencia y respeto. Usa un lenguaje sencillo, cálido y cercano, como si fuera tu abuela.
+Pregúntale cómo se siente, si tiene dolores, si durmió bien, si comió. Anímala y hazla sentir acompañada.
+Si menciona síntomas preocupantes o fiebre alta, dile con calma que es bueno avisar a su familia o al médico.
+Nunca hagas diagnósticos. Responde siempre en español, con frases cortas y fáciles de entender.` }]
           },
           contents: historial,
           generationConfig: { maxOutputTokens: 600 },
